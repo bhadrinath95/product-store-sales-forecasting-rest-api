@@ -81,8 +81,6 @@ def predict_sales_batch():
     # Read the CSV file
     input_data = pd.read_csv(file)
 
-    input_data = input_data[numeric_features + categorical_features]
-
     # ---------------------------------------------------------
     # Make predictions
     # ---------------------------------------------------------
