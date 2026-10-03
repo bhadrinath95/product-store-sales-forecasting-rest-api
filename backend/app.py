@@ -1,4 +1,5 @@
 
+
 # Import necessary libraries
 import joblib
 import pandas as pd
@@ -34,51 +35,21 @@ def predict_sales():
 
     # Create sample using user-provided features
     sample = {
-        'Product_Id': product_data['Product_Id'],
         'Product_Weight': product_data['Product_Weight'],
-        'Product_Sugar_Content': product_data['Product_Sugar_Content'],
         'Product_Allocated_Area': product_data['Product_Allocated_Area'],
-        'Product_Type': product_data['Product_Type'],
         'Product_MRP': product_data['Product_MRP'],
-        'Store_Id': product_data['Store_Id'],
-        'Store_Establishment_Year': product_data['Store_Establishment_Year'],
+
+        'Product_Sugar_Content': product_data['Product_Sugar_Content'],
         'Store_Size': product_data['Store_Size'],
         'Store_Location_City_Type': product_data['Store_Location_City_Type'],
-        'Store_Type': product_data['Store_Type']
+        'Store_Type': product_data['Store_Type'],
+        'Product_Id_char': product_data['Product_Id_char'],
+        'Store_Age_Years': product_data['Store_Age_Years'],
+        'Product_Type_Category': product_data['Product_Type_Category'],
     }
 
     # Convert the input into a DataFrame
     input_data = pd.DataFrame([sample])
-
-    # ---------------------------------------------------------
-    # Create derived features automatically
-    # ---------------------------------------------------------
-
-    # Create Product_Category from the first two characters of Product_Id
-    input_data['Product_Category'] = input_data['Product_Id'].str[:2]
-
-    # Create Age_Of_The_Store
-    current_year = pd.Timestamp.now().year
-
-    input_data['Age_Of_The_Store'] = (
-        current_year - input_data['Store_Establishment_Year']
-    )
-
-    # Define perishable product types
-    perishable_products = [
-        'Fruits and Vegetables',
-        'Dairy',
-        'Meat',
-        'Breads',
-        'Seafood'
-    ]
-
-    # Create Product_Perishability
-    input_data['Product_Perishability'] = input_data['Product_Type'].apply(
-        lambda x: 'Perishable'
-        if x in perishable_products
-        else 'Non-Perishable'
-    )
 
     # ---------------------------------------------------------
     # Make prediction
@@ -110,35 +81,7 @@ def predict_sales_batch():
     # Read the CSV file
     input_data = pd.read_csv(file)
 
-    # ---------------------------------------------------------
-    # Create derived features automatically
-    # ---------------------------------------------------------
-
-    # Create Product_Category
-    input_data['Product_Category'] = input_data['Product_Id'].str[:2]
-
-    # Create Age_Of_The_Store
-    current_year = pd.Timestamp.now().year
-
-    input_data['Age_Of_The_Store'] = (
-        current_year - input_data['Store_Establishment_Year']
-    )
-
-    # Define perishable product types
-    perishable_products = [
-        'Fruits and Vegetables',
-        'Dairy',
-        'Meat',
-        'Breads',
-        'Seafood'
-    ]
-
-    # Create Product_Perishability
-    input_data['Product_Perishability'] = input_data['Product_Type'].apply(
-        lambda x: 'Perishable'
-        if x in perishable_products
-        else 'Non-Perishable'
-    )
+    input_data = input_data[numeric_features + categorical_features]
 
     # ---------------------------------------------------------
     # Make predictions
@@ -152,15 +95,15 @@ def predict_sales_batch():
         for sales in predicted_sales
     ]
 
-    # Create dictionary using Product_Id
-    product_ids = input_data['Product_Id'].tolist()
-
-    output_dict = dict(zip(product_ids, predicted_sales))
-
-    # Return predictions
-    return jsonify(output_dict)
+    return jsonify({
+        'Predicted Product Store Sales Total': predicted_sales
+    })
 
 
 # Run the Flask application
 if __name__ == '__main__':
-    sales_forecasting_api.run(debug=True)
+    sales_forecasting_api.run(
+        host="0.0.0.0",
+        port=7860,
+        debug=False
+    )
