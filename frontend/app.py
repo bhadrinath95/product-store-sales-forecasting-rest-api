@@ -1,13 +1,15 @@
 
+
 import streamlit as st
 import pandas as pd
 import requests
 
 # Base URL of the Flask backend
-BACKEND_URL = "http://backend:7860"
+BACKEND_URL = "http://localhost:7860"
 
 # Set the title of the Streamlit app
 st.title("Product Store Sales Forecasting")
+
 
 # ---------------------------------------------------------
 # Online Prediction
@@ -16,21 +18,14 @@ st.title("Product Store Sales Forecasting")
 st.subheader("Online Prediction")
 
 # Collect user input for product features
-product_id = st.text_input(
-    "Product ID",
-    value="FD6114"
-)
+
+# Numeric Data
 
 product_weight = st.number_input(
     "Product Weight",
     min_value=0.0,
     value=12.66,
     step=0.01
-)
-
-product_sugar_content = st.selectbox(
-    "Product Sugar Content",
-    ["Low Sugar", "Regular", "No Sugar"]
 )
 
 product_allocated_area = st.number_input(
@@ -41,28 +36,6 @@ product_allocated_area = st.number_input(
     format="%.3f"
 )
 
-product_type = st.selectbox(
-    "Product Type",
-    [
-        "Fruits and Vegetables",
-        "Snack Foods",
-        "Frozen Foods",
-        "Dairy",
-        "Household",
-        "Baking Goods",
-        "Canned",
-        "Health and Hygiene",
-        "Meat",
-        "Soft Drinks",
-        "Breads",
-        "Hard Drinks",
-        "Others",
-        "Starchy Foods",
-        "Breakfast",
-        "Seafood"
-    ]
-)
-
 product_mrp = st.number_input(
     "Product MRP",
     min_value=0.0,
@@ -70,24 +43,11 @@ product_mrp = st.number_input(
     step=0.01
 )
 
-store_id = st.selectbox(
-    "Store ID",
-    [
-        "OUT001",
-        "OUT002",
-        "OUT003",
-        "OUT004",
-    ]
-)
+# Categorical Data
 
-store_establishment_year = st.selectbox(
-    "Store Establishment Year",
-    [
-        2009,
-        1987,
-        1999,
-        1998,
-    ]
+product_sugar_content = st.selectbox(
+    "Product Sugar Content",
+    ["Low Sugar", "Regular", "No Sugar"]
 )
 
 store_size = st.selectbox(
@@ -110,20 +70,43 @@ store_type = st.selectbox(
     ]
 )
 
+product_id_char = st.selectbox(
+    "Product ID Character",
+    [
+        "FD",
+        "NC",
+        "DR",
+    ]
+)
+
+store_age_years = st.selectbox(
+    "Store Age (Years)",
+    [
+        17, 27, 39, 28
+    ]
+)
+
+product_type_category = st.selectbox(
+    "Product Type Category",
+    [
+        "Non Perishables",
+        "Perishables",
+    ]
+)
 
 # Convert user input into a DataFrame
 input_data = pd.DataFrame([{
-    'Product_Id': product_id,
     'Product_Weight': product_weight,
     'Product_Sugar_Content': product_sugar_content,
     'Product_Allocated_Area': product_allocated_area,
-    'Product_Type': product_type,
+
     'Product_MRP': product_mrp,
-    'Store_Id': store_id,
-    'Store_Establishment_Year': store_establishment_year,
     'Store_Size': store_size,
     'Store_Location_City_Type': store_location_city_type,
-    'Store_Type': store_type
+    'Store_Type': store_type,
+    'Product_Id_char': product_id_char,
+    'Store_Age_Years': store_age_years,
+    'Product_Type_Category': product_type_category
 }])
 
 
@@ -131,6 +114,7 @@ input_data = pd.DataFrame([{
 if st.button("Predict", type="primary"):
 
     try:
+
         response = requests.post(
             f"{BACKEND_URL}/v1/sales",
             json=input_data.to_dict(orient='records')[0]
@@ -147,11 +131,15 @@ if st.button("Predict", type="primary"):
             )
 
         else:
+
             st.error(
                 f"Prediction failed. Status code: {response.status_code}"
             )
 
+            st.write(response.text)
+
     except requests.exceptions.RequestException:
+
         st.error(
             "Unable to connect to the prediction API."
         )
@@ -175,8 +163,11 @@ if uploaded_file is not None:
 
     # Display uploaded data
     st.write("Uploaded Data")
+
     batch_data = pd.read_csv(uploaded_file)
+
     st.dataframe(batch_data)
+
 
     if st.button("Predict Batch", type="primary"):
 
@@ -184,6 +175,7 @@ if uploaded_file is not None:
         uploaded_file.seek(0)
 
         try:
+
             response = requests.post(
                 f"{BACKEND_URL}/v1/salesbatch",
                 files={"file": uploaded_file}
@@ -191,20 +183,22 @@ if uploaded_file is not None:
 
             if response.status_code == 200:
 
-                predictions = response.json()
+                response_data = response.json()
+
+                predictions = response_data[
+                    'Predicted Product Store Sales Total'
+                ]
 
                 st.success(
                     "Batch predictions completed!"
                 )
 
-                # Convert predictions into a DataFrame
-                prediction_data = pd.DataFrame(
-                    list(predictions.items()),
-                    columns=[
-                        "Product_Id",
-                        "Predicted Product Store Sales Total"
-                    ]
-                )
+                # Add predictions to the uploaded data
+                prediction_data = batch_data.copy()
+
+                prediction_data[
+                    'Predicted Product Store Sales Total'
+                ] = predictions
 
                 st.dataframe(prediction_data)
 
@@ -214,6 +208,8 @@ if uploaded_file is not None:
                     f"Batch prediction failed. "
                     f"Status code: {response.status_code}"
                 )
+
+                st.write(response.text)
 
         except requests.exceptions.RequestException:
 
